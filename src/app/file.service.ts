@@ -1,17 +1,35 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject, Observable } from 'rxjs';
-import { finalize } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, Inject, PLATFORM_ID, Optional } from '@angular/core';
+import { BehaviorSubject, Subject, Observable, ReplaySubject } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { isPlatformServer } from '@angular/common';
+import { TransferState, makeStateKey, StateKey } from '@angular/platform-browser';
 
 @Injectable({
  providedIn: 'root'
 })
 export class FileService {
  private fileList: string[] = new Array<string>();
- private fileList$: Subject<string[]> = new Subject<string[]>();
+ private fileList$: Subject<string[]> = new ReplaySubject<string[]>(1);
  private displayLoader$: Subject<boolean> = new BehaviorSubject<boolean>(false);
 
- constructor(private http: HttpClient) { }
+ constructor(
+  private http: HttpClient,
+  @Optional() @Inject('LIST_FILES') private listFiles: (callback) => void,
+  @Inject(PLATFORM_ID) private platformId: any,
+  private transferState: TransferState
+  ) {
+   const transferKey: StateKey<string> = makeStateKey<string>('fileList');
+   if (isPlatformServer(this.platformId)) {
+    this.listFiles((err, files) => {
+      this.fileList = files;
+      this.transferState.set(transferKey, this.fileList);
+    });
+   } else {
+     this.fileList = this.transferState.get<string[]>(transferKey, []);
+   }
+   this.fileList$.next(this.fileList);
+ } 
 
  public isLoading(): Observable<boolean> {
    return this.displayLoader$;

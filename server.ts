@@ -22,13 +22,19 @@ const {AppServerModuleNgFactory, LAZY_MODULE_MAP} = require('./dist/server/main'
 
 const userFiles = './user_upload/';
 const fs = require('fs');
+const listFiles = (callBack) => {
+  return fs.readdir('./user_upload', callBack);
+ };
+ 
 
-app.engine('html', ngExpressEngine({
+ app.engine('html', ngExpressEngine({
   bootstrap: AppServerModuleNgFactory,
   providers: [
-    provideModuleMap(LAZY_MODULE_MAP)
+    provideModuleMap(LAZY_MODULE_MAP),
+    {provide: 'LIST_FILES', useValue: listFiles}
   ]
-}));
+ }));
+ 
 
 app.set('view engine', 'html');
 app.set('views', './dist/browser');
